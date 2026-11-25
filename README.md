@@ -1,194 +1,112 @@
-# Evidence 2 — Backend API
+# HALCON — Sistema de gestión de pedidos y empleados
 
-## 1. Descripción del proyecto
+Aplicación escolar desarrollada con Laravel 12, Vue 3 y SQLite. Conserva el rastreador público de pedidos y agrega un espacio privado para empleados con acceso basado en roles.
 
-Este proyecto consiste en una API REST desarrollada con Laravel para administrar usuarios, pedidos y facturas. Permite realizar operaciones CRUD, actualizar estados y consultar pedidos archivados.
+## Requisitos
 
-## 2. Tecnologías utilizadas
-
-- PHP
-- Laravel
-- MySQL
+- PHP 8.2 o superior
 - Composer
-- Postman para las pruebas de los endpoints
+- Node.js y npm
+- SQLite habilitado en PHP
 
-## 3. Requisitos previos
+## Instalación local
 
-Antes de ejecutar el proyecto, es necesario contar con:
-
-- PHP compatible con la versión de Laravel del proyecto.
-- Composer.
-- MySQL o MariaDB.
-- XAMPP u otro entorno que proporcione PHP y MySQL.
-
-## 4. Instalación y configuración
-
-1. Clonar o descargar el repositorio.
-2. Abrir una terminal en la carpeta raíz del proyecto.
-3. Instalar las dependencias:
+1. Instala las dependencias de PHP:
 
    ```bash
    composer install
    ```
 
-4. Crear el archivo de configuración a partir del ejemplo:
+2. Crea tu archivo de entorno y la base SQLite:
 
    ```bash
-   copy .env.example .env
+   cp .env.example .env
    ```
 
-   Si el archivo `.env` ya existe, no es necesario crearlo de nuevo.
+   En Windows PowerShell puedes usar `Copy-Item .env.example .env`.
 
-5. Generar la clave de la aplicación:
+3. Crea la clave y el archivo de base de datos:
 
    ```bash
    php artisan key:generate
    ```
 
-6. Configurar las variables de conexión a la base de datos en el archivo `.env`:
+   Crea `database/database.sqlite` si todavía no existe.
 
-   ```env
-   DB_CONNECTION=mysql
-   DB_HOST=127.0.0.1
-   DB_PORT=3306
-   DB_DATABASE=evidencia
-   DB_USERNAME=root
-   DB_PASSWORD=
-   ```
-
-   Estos valores corresponden a la configuración local utilizada durante las pruebas. Deben ajustarse si el entorno de ejecución utiliza otras credenciales.
-
-7. Crear la base de datos `evidencia` en MySQL si todavía no existe.
-
-8. Ejecutar las migraciones:
+4. Ejecuta las migraciones y los datos de demostración:
 
    ```bash
    php artisan migrate
-   ```
-
-9. Para cargar los datos de prueba en una instalación nueva, ejecutar:
-
-   ```bash
    php artisan db:seed
    ```
 
-10. Iniciar el servidor de desarrollo:
+5. Instala y compila los recursos del frontend:
 
-    ```bash
-    php artisan serve
-    ```
+   ```bash
+   npm install
+   npm run build
+   ```
 
-La API estará disponible normalmente en `http://127.0.0.1:8000`.
+6. En desarrollo, abre dos terminales:
 
-**Importante:** ejecutar los seeders puede agregar registros de prueba. No es necesario volver a ejecutarlos si los datos ya están cargados.
+   ```bash
+   php artisan serve
+   ```
 
-## 5. Endpoints de la API
+   ```bash
+   npm run dev
+   ```
 
-La URL base utilizada durante las pruebas es:
+   Visita `http://127.0.0.1:8000`.
 
-`http://127.0.0.1:8000/api`
+## Cuenta inicial de demostración
 
-### Usuarios
+El seeder crea el administrador solo si todavía no existe una cuenta con ese correo:
 
-| Método HTTP | Endpoint | Descripción |
-|---|---|---|
-| GET | `/users` | Listar usuarios |
-| POST | `/users` | Crear un usuario |
-| GET | `/users/{user}` | Consultar un usuario por ID |
-| PUT/PATCH | `/users/{user}` | Actualizar información del usuario |
-| PATCH | `/users/{user}/status` | Actualizar el estado del usuario |
+- Correo: `admin@halcon.local`
+- Contraseña inicial: `HalconAdmin2026!`
+- Rol: Administrador
 
-### Pedidos
+Estas credenciales son exclusivamente para la demostración local. Cámbialas antes de cualquier despliegue real. También puedes configurar `HALCON_ADMIN_EMAIL` y `HALCON_ADMIN_PASSWORD` en `.env` antes de ejecutar `php artisan db:seed`.
 
-| Método HTTP | Endpoint | Descripción |
-|---|---|---|
-| GET | `/orders` | Listar pedidos |
-| POST | `/orders` | Crear un pedido |
-| GET | `/orders/{order}` | Consultar un pedido por ID |
-| GET | `/orders/invoice/{invoice}` | Buscar un pedido por número de factura |
-| PUT/PATCH | `/orders/{order}` | Actualizar un pedido |
-| PATCH | `/orders/{order}/status` | Cambiar el estado del pedido |
-| DELETE | `/orders/{order}` | Archivar un pedido |
-| GET | `/orders/archived` | Consultar pedidos archivados |
+## Roles
 
-## 6. Ejemplos de solicitudes
+| Rol | Acceso |
+|---|---|
+| Administrator | Resumen, gestión de empleados y todos los pedidos |
+| Sales | Registrar y consultar pedidos |
+| Purchasing | Consultar pedidos con compra pendiente y marcar la compra completada |
+| Warehouse | Consultar pedidos en proceso y marcarlos listos para ruta |
+| Route | Gestionar pedidos listos para ruta, marcar envíos y registrar evidencia de entrega |
 
-### Crear un usuario
+Solo el administrador puede consultar, registrar, editar, activar o desactivar empleados. No existe registro público de clientes ni de empleados.
 
-**Método:** POST
+## Flujo de demostración
 
-**Endpoint:** `/users`
+1. Inicia sesión con la cuenta de administrador.
+2. Entra a **Empleados** y registra una cuenta de Ventas.
+3. Cierra sesión e inicia con la cuenta de Ventas.
+4. Registra un pedido y marca si requiere compra de materiales.
+5. Crea o usa cuentas de Compras, Almacén y Rutas para demostrar el flujo por áreas.
+6. El rastreador público continúa disponible en `/` y usa número de cliente y factura.
 
-Cuerpo JSON de ejemplo:
+## Rutas principales
 
-```json
-{
-  "name": "Peter Parker",
-  "email": "peter.parker@example.test",
-  "password": "Password123!",
-  "is_active": true
-}
-```
+- `/` — Rastreador público de pedidos.
+- `/login` — Inicio de sesión de empleados.
+- `/dashboard` — Panel privado protegido.
+- `/api/employees` — API de administración de empleados (solo Administrator).
+- `/api/workspace/orders` — Bandeja de pedidos filtrada por rol.
+- `/api/orders` — Consulta pública de pedidos.
 
-### Crear un pedido
+## Seguridad implementada
 
-**Método:** POST
-
-**Endpoint:** `/orders`
-
-Cuerpo JSON de ejemplo:
-
-```json
-{
-  "user_id": 26,
-  "total_value": 1500,
-  "tax": 240,
-  "shipping_charges": 100
-}
-```
-
-El `user_id` debe corresponder a un usuario existente. El pedido creado genera una factura asociada.
-
-### Cambiar el estado de un pedido
-
-**Método:** PATCH
-
-**Endpoint:** `/orders/{order}/status`
-
-Cuerpo JSON de ejemplo:
-
-```json
-{
-  "status": "processing"
-}
-```
-
-### Archivar un pedido
-
-**Método:** DELETE
-
-**Endpoint:** `/orders/{order}`
-
-Esta operación archiva el pedido mediante eliminación lógica, de modo que puede consultarse posteriormente en `/orders/archived`.
-
-## 7. Pruebas con Postman
-
-Los endpoints se probaron utilizando Postman. Para las solicitudes JSON se utiliza el encabezado:
-
-`Accept: application/json`
-
-Para enviar cuerpos JSON también se utiliza:
-
-`Content-Type: application/json`
-
-Las pruebas incluyen la creación y consulta de usuarios, la creación y actualización de pedidos, la búsqueda por factura y la verificación de pedidos archivados.
-
-## 8. Ejecución
-
-Con MySQL activo, las dependencias instaladas y el archivo `.env` configurado, ejecutar:
-
-```bash
-php artisan serve
-```
-
-Después, enviar las solicitudes desde Postman utilizando la URL base indicada anteriormente.
+- Autenticación de sesión de Laravel.
+- Regeneración de sesión al iniciar sesión.
+- Cierre de sesión e invalidación del token CSRF.
+- Acceso al panel protegido con middleware `auth`.
+- Autorización de endpoints mediante middleware `role`.
+- Las cuentas inactivas no pueden iniciar sesión.
+- Validación de correo único y contraseñas confirmadas.
+- Protección para conservar al menos un administrador activo.
+- No se permite que el administrador desactive su propia cuenta desde el panel.

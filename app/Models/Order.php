@@ -2,39 +2,25 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Order extends Model
 {
-    use HasFactory, SoftDeletes;
-
-    protected $fillable = ['user_id', 'status', 'total_value', 'tax', 'shipping_charges'];
-
-    protected $casts = [
-        'total_value' => 'integer',
-        'tax' => 'integer',
-        'shipping_charges' => 'integer',
+    protected $fillable = [
+        'customer_number',
+        'invoice_number',
+        'product_name',
+        'status',
+        'order_date',
+        'purchase_required',
+        'delivery_evidence',
     ];
 
-    public function user()
+    protected function casts(): array
     {
-        return $this->belongsTo(User::class);
-    }
-
-    public function invoice()
-    {
-        return $this->hasOne(Invoice::class);
-    }
-
-    public function transactions()
-    {
-        return $this->hasMany(Transaction::class);
-    }
-
-    public function items()
-    {
-        return $this->belongsToMany(Item::class);
+        return [
+            'order_date' => 'date:Y-m-d',
+            'purchase_required' => 'boolean',
+        ];
     }
 }
