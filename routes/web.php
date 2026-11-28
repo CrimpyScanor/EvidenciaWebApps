@@ -41,6 +41,24 @@ Route::middleware(['auth', 'active'])->group(function () {
 
     Route::patch('/api/workspace/orders/{order}', [WorkspaceOrderController::class, 'update'])
         ->middleware('role:Administrator,Sales,Purchasing,Warehouse,Route');
+    
+    
+    // Consultar los detalles de un pedido
+    Route::get('/api/workspace/orders/{order}', [WorkspaceOrderController::class, 'show'])
+        ->middleware('role:Administrator,Sales,Purchasing,Warehouse,Route');
+
+    // Eliminar lógicamente un pedido
+    Route::delete('/api/workspace/orders/{order}', [WorkspaceOrderController::class, 'destroy'])
+        ->middleware('role:Administrator,Sales');
+
+    // Consultar pedidos eliminados
+    Route::get('/api/workspace/deleted-orders', [WorkspaceOrderController::class, 'deletedIndex'])
+        ->middleware('role:Administrator,Sales');
+
+    // Restaurar un pedido eliminado
+    Route::patch('/api/workspace/deleted-orders/{id}/restore', [WorkspaceOrderController::class, 'restore'])
+        ->middleware('role:Administrator,Sales');
+
 
     Route::middleware('role:Administrator')->prefix('api/employees')->group(function () {
         Route::get('/', [EmployeeController::class, 'index']);

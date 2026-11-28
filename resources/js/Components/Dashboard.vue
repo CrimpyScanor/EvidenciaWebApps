@@ -65,31 +65,63 @@
 
                     <form v-if="showEmployeeForm" class="editor-card" @submit.prevent="saveEmployee">
                         <div class="editor-heading">
-                            <div><h3>{{ editingEmployee ? 'Editar empleado' : 'Registrar empleado' }}</h3><p>Los campos con * son obligatorios.</p></div>
+                            <div>
+                                <h3>{{ editingEmployee ? 'Editar empleado' : 'Registrar empleado' }}</h3>
+                                <p>Los campos con * son obligatorios.</p>
+                            </div>
                             <button type="button" class="close-button" @click="closeEmployeeForm">×</button>
                         </div>
+
                         <div class="form-grid">
-                            <label>Nombre completo *<input v-model.trim="employeeForm.name" required maxlength="255" placeholder="Nombre del empleado" /></label>
-                            <label>Correo electrónico *<input v-model.trim="employeeForm.email" type="email" required placeholder="empleado@halcon.local" /></label>
+                            <label>Nombre completo *
+                                <input v-model.trim="employeeForm.name" required maxlength="255"
+                                    placeholder="Nombre del empleado" />
+                            </label>
+
+                            <label>Correo electrónico *
+                                <input v-model.trim="employeeForm.email" type="email" required
+                                    placeholder="empleado@halcon.local" />
+                            </label>
+
                             <label>Rol asignado *
                                 <select v-model="employeeForm.role" required>
-                                    <option v-for="role in roles" :key="role.value" :value="role.value">{{ role.label }}</option>
+                                    <option v-for="role in roles" :key="role.value" :value="role.value">
+                                        {{ role.label }}
+                                    </option>
                                 </select>
                             </label>
+
                             <label>{{ editingEmployee ? 'Nueva contraseña (opcional)' : 'Contraseña *' }}
-                                <input v-model="employeeForm.password" type="password" :required="!editingEmployee" minlength="8" autocomplete="new-password" placeholder="Mínimo 8 caracteres" />
+                                <input v-model="employeeForm.password" type="password"
+                                    :required="!editingEmployee" minlength="8"
+                                    autocomplete="new-password" placeholder="Mínimo 8 caracteres" />
                             </label>
+
                             <label>Confirmar contraseña
-                                <input v-model="employeeForm.password_confirmation" type="password" :required="!!employeeForm.password || !editingEmployee" minlength="8" autocomplete="new-password" placeholder="Repite la contraseña" />
+                                <input v-model="employeeForm.password_confirmation" type="password"
+                                    :required="!!employeeForm.password || !editingEmployee"
+                                    minlength="8" autocomplete="new-password"
+                                    placeholder="Repite la contraseña" />
                             </label>
-                            <label class="check-field"><input v-model="employeeForm.is_active" type="checkbox" /> Cuenta activa</label>
+
+                            <label class="check-field">
+                                <input v-model="employeeForm.is_active" type="checkbox" />
+                                Cuenta activa
+                            </label>
                         </div>
+
                         <p v-if="formError" class="form-error">{{ formError }}</p>
+
                         <div class="editor-actions">
-                            <button type="button" class="secondary-action" @click="closeEmployeeForm">Cancelar</button>
-                            <button class="primary-action" type="submit" :disabled="saving">{{ saving ? 'Guardando...' : 'Guardar empleado' }}</button>
+                            <button type="button" class="secondary-action" @click="closeEmployeeForm">
+                                Cancelar
+                            </button>
+                            <button class="primary-action" type="submit" :disabled="saving">
+                                {{ saving ? 'Guardando...' : 'Guardar empleado' }}
+                            </button>
                         </div>
                     </form>
+
 
                     <div class="table-wrap">
                         <table class="data-table">
@@ -113,43 +145,395 @@
                 <section v-if="activeTab === 'orders' || ['Sales','Purchasing','Warehouse','Route'].includes(user.role) && activeTab === 'work'" class="content-panel">
                     <div class="section-heading">
                         <div><p class="eyebrow">{{ moduleEyebrow }}</p><h2>{{ moduleTitle }}</h2><p>{{ moduleDescription }}</p></div>
-                        <button v-if="canCreateOrders" class="primary-action" @click="openCreateOrder">＋ Nuevo pedido</button>
+                       <button
+                        v-if="canCreateOrders && !showDeletedOrders"
+                        class="primary-action"
+                        @click="openCreateOrder"
+                    >＋ Nuevo pedido</button>
+                    </div>
+                    <div class="order-view-tabs">
+                        <button
+                            type="button"
+                            :class="{ active: !showDeletedOrders }"
+                            @click="showDeletedOrders = false; loadOrders()"
+                        >
+                            Pedidos activos
+                        </button>
+
+                        <button
+                            v-if="['Administrator', 'Sales'].includes(user.role)"
+                            type="button"
+                            :class="{ active: showDeletedOrders }"
+                            @click="showDeletedOrders = true; loadDeletedOrders()"
+                        >
+                            Papelera ({{ deletedOrders.length }})
+                        </button>
                     </div>
 
-                    <form v-if="showOrderForm && canCreateOrders" class="editor-card" @submit.prevent="createOrder">
+                    <form v-if="!showDeletedOrders && showOrderForm && canCreateOrders" class="editor-card" @submit.prevent="createOrder">
                         <div class="editor-heading"><div><h3>{{ editingOrder ? 'Editar pedido' : 'Registrar pedido' }}</h3><p>Ingresa la información del pedido.</p></div><button type="button" class="close-button" @click="closeOrderForm">×</button></div>
-                        <div class="form-grid">
-                            <label>Número de cliente *<input v-model.trim="orderForm.customer_number" required placeholder="Ej. C004" /></label>
-                            <label>Número de factura *<input v-model.trim="orderForm.invoice_number" required placeholder="Ej. INV-1005" /></label>
-                            <label>Producto *<input v-model.trim="orderForm.product_name" required placeholder="Nombre del producto" /></label>
-                            <label>Fecha del pedido<input v-model="orderForm.order_date" type="date" /></label>
-                            <label class="check-field"><input v-model="orderForm.purchase_required" type="checkbox" /> Requiere compra de material</label>
-                        </div>
+
+                    <div class="form-grid">
+                        <label>Número de cliente *
+                            <input v-model.trim="orderForm.customer_number"
+                                required placeholder="Ej. C004" />
+                        </label>
+
+                        <label>Nombre del cliente o empresa *
+                            <input v-model.trim="orderForm.customer_name"
+                                required placeholder="Nombre o razón social" />
+                        </label>
+
+                        <label>Número de factura *
+                            <input v-model.trim="orderForm.invoice_number"
+                                required placeholder="Ej. INV-1005" />
+                        </label>
+
+                        <label>Producto *
+                            <input v-model.trim="orderForm.product_name"
+                                required placeholder="Nombre del producto" />
+                        </label>
+
+                        <label>Información fiscal del cliente
+                            <textarea v-model.trim="orderForm.customer_fiscal_information"
+                                rows="3" placeholder="RFC, régimen fiscal y otros datos"></textarea>
+                        </label>
+
+                        <label>Dirección de entrega *
+                            <textarea v-model.trim="orderForm.delivery_address"
+                                rows="3" required placeholder="Dirección completa de entrega"></textarea>
+                        </label>
+
+                        <label>Fecha del pedido
+                            <input v-model="orderForm.order_date" type="date" />
+                        </label>
+
+                        <label>Fecha y hora del pedido
+                            <input v-model="orderForm.order_datetime" type="datetime-local" />
+                        </label>
+
+                        <label>Notas adicionales
+                            <textarea v-model.trim="orderForm.notes"
+                                rows="3" placeholder="Indicaciones o comentarios"></textarea>
+                        </label>
+
+                        <label class="check-field">
+                            <input v-model="orderForm.purchase_required" type="checkbox" />
+                            Requiere compra de material
+                        </label>
+                    </div>
+
                         <p v-if="orderFormError" class="form-error">{{ orderFormError }}</p>
                         <div class="editor-actions"><button type="button" class="secondary-action" @click="closeOrderForm">Cancelar</button><button class="primary-action" type="submit" :disabled="savingOrder">{{ savingOrder ? 'Guardando...' : (editingOrder ? 'Guardar cambios' : 'Guardar pedido') }}</button></div>
                     </form>
 
-                    <div class="order-list">
+
+                    <div v-if="!showDeletedOrders" class="order-filters">
+                        <label>
+                            Número de factura
+                            <input
+                                v-model.trim="orderFilters.invoice_number"
+                                placeholder="Ej. INV-1005"
+                            />
+                        </label>
+
+                        <label>
+                            Número de cliente
+                            <input
+                                v-model.trim="orderFilters.customer_number"
+                                placeholder="Ej. C004"
+                            />
+                        </label>
+
+                        <label>
+                            Fecha
+                            <input
+                                v-model="orderFilters.date"
+                                type="date"
+                            />
+                        </label>
+
+                        <label>
+                            Estado
+                            <select v-model="orderFilters.status">
+                                <option value="">Todos los estados</option>
+                                <option value="Ordered">Ordered</option>
+                                <option value="In process">In process</option>
+                                <option value="In route">In route</option>
+                                <option value="Delivered">Delivered</option>
+                            </select>
+                        </label>
+
+                        <div class="filter-actions">
+                            <button
+                                type="button"
+                                class="primary-action"
+                                @click="applyOrderFilters"
+                            >
+                                Buscar
+                            </button>
+
+                            <button
+                                type="button"
+                                class="secondary-action"
+                                @click="clearOrderFilters"
+                            >
+                                Limpiar
+                            </button>
+                        </div>
+                    </div>
+
+
+                    <div v-if="!showDeletedOrders" class="order-list">
                         <article v-for="order in orders" :key="order.id" class="order-card">
                             <div class="order-main">
                                 <div class="order-icon">▣</div>
                                 <div class="order-info"><strong>{{ order.product_name }}</strong><span>{{ order.invoice_number }} · Cliente {{ order.customer_number }}</span><small>{{ formatDate(order.order_date) }}</small></div>
                             </div>
-                            <div class="order-status-block"><span class="status-label">ESTADO</span><span :class="['order-status', statusClass(order.status)]">{{ statusName(order.status) }}</span></div>
-                            <div class="order-actions">
-                                <button v-if="canCreateOrders" class="text-action" @click="openEditOrder(order)">Editar</button>
-                                <button v-if="user.role === 'Purchasing' && order.purchase_required" class="small-action" @click="updateOrder(order, 'purchase_complete')">Compra completada</button>
-                                <button v-if="user.role === 'Warehouse' && ['Pending','Processing'].includes(order.status)" class="small-action" @click="updateOrder(order, 'warehouse_ready')">Preparado para ruta</button>
-                                <button v-if="user.role === 'Route' && order.status === 'Ready for Route'" class="small-action" @click="updateOrder(order, 'dispatch')">Marcar enviado</button>
-                                <template v-if="user.role === 'Route' && order.status === 'Shipped'">
-                                    <input v-model="evidenceDrafts[order.id]" class="evidence-input" placeholder="Evidencia de entrega (folio o nota)" />
-                                    <button class="small-action" @click="updateOrder(order, 'deliver')">Confirmar entrega</button>
-                                </template>
-                                <span v-if="order.delivery_evidence" class="evidence-note">Evidencia: {{ order.delivery_evidence }}</span>
+                            <div class="order-status-block">
+                                <span class="status-label">ESTADO</span>
+
+                                <span :class="['order-status', statusClass(order.status)]">
+                                    {{ statusName(order.status) }}
+                                </span>
+
+                                <select
+                                    v-if="user.role === 'Administrator'"
+                                    :value="order.status"
+                                    class="status-select"
+                                    @change="updateOrder(order, 'admin_set_status', $event.target.value)"
+                                >
+                                    <option value="Ordered">Ordered</option>
+                                    <option value="In process">In process</option>
+                                    <option value="In route">In route</option>
+                                    <option value="Delivered">Delivered</option>
+                                </select>
                             </div>
+                            <div class="order-actions">
+                            <button
+                                class="text-action"
+                                @click="openOrderDetails(order)"
+                            >
+                                Ver detalles
+                            </button>
+                            <button
+                                v-if="canCreateOrders"
+                                class="text-action"
+                                @click="openEditOrder(order)"
+                            >
+                                Editar
+                            </button>
+                            <button
+                                v-if="['Administrator', 'Sales'].includes(user.role)"
+                                class="text-action danger"
+                                @click="deleteOrder(order)"
+                            >
+                                Eliminar
+                            </button>
+
+                            <button
+                                v-if="user.role === 'Purchasing' && order.purchase_required"
+                                class="small-action"
+                                @click="updateOrder(order, 'purchase_complete')"
+                            >
+                                Compra completada
+                            </button>
+
+                            <button
+                                v-if="user.role === 'Warehouse' && ['Ordered', 'In process'].includes(order.status)"
+                                class="small-action"
+                                @click="updateOrder(order, 'warehouse_ready')"
+                            >
+                                Enviar a ruta
+                            </button>
+
+                            <template v-if="user.role === 'Route' && order.status === 'In route'">
+                                <input
+                                    v-model="evidenceDrafts[order.id]"
+                                    class="evidence-input"
+                                    placeholder="Evidencia de entrega"
+                                />
+
+                                <button
+                                    class="small-action"
+                                    @click="updateOrder(order, 'deliver')"
+                                >
+                                    Confirmar entrega
+                                </button>
+                            </template>
+
+                            <span v-if="order.delivery_evidence" class="evidence-note">
+                                Evidencia: {{ order.delivery_evidence }}
+                            </span>
+                        </div>
                         </article>
                         <div v-if="!orders.length" class="empty-state"><span>✦</span><strong>No hay pedidos en esta bandeja</strong><p>Cuando haya operaciones asignadas a tu área, aparecerán aquí.</p></div>
                     </div>
+                    <div v-if="showDeletedOrders" class="order-list">
+
+                    <div v-if="loadingDeletedOrders" class="loading-state">
+                        Cargando pedidos eliminados...
+                    </div>
+
+                    <article
+                        v-for="order in deletedOrders"
+                        :key="order.id"
+                        class="order-card deleted-order-card"
+                    >
+                        <div class="order-main">
+                            <div class="order-icon">▣</div>
+
+                            <div class="order-info">
+                                <strong>{{ order.product_name }}</strong>
+                                <span>
+                                    {{ order.invoice_number }} · Cliente {{ order.customer_number }}
+                                </span>
+                                <small>{{ formatDate(order.order_date) }}</small>
+                            </div>
+                        </div>
+
+                        <div class="order-status-block">
+                            <span class="status-label">ESTADO</span>
+
+                            <span :class="['order-status', statusClass(order.status)]">
+                                {{ statusName(order.status) }}
+                            </span>
+
+                            <small v-if="order.deleted_at">
+                                Eliminado: {{ new Date(order.deleted_at).toLocaleString('es-MX') }}
+                            </small>
+                        </div>
+
+                        <div class="order-actions">
+                            <button
+                                class="text-action"
+                                @click="restoreOrder(order)"
+                            >
+                                Restaurar
+                            </button>
+                        </div>
+                    </article>
+
+                    <div
+                        v-if="!loadingDeletedOrders && !deletedOrders.length"
+                        class="empty-state"
+                    >
+                        <span>✦</span>
+                        <strong>La papelera está vacía</strong>
+                        <p>Los pedidos eliminados aparecerán aquí.</p>
+                    </div>
+
+                </div>
+
+                    <div
+                        v-if="showOrderDetails"
+                        class="modal-overlay"
+                        @click.self="closeOrderDetails"
+                    >
+                        <div class="details-modal">
+                            <div class="details-header">
+                                <div>
+                                    <p class="eyebrow">INFORMACIÓN DE OPERACIÓN</p>
+                                    <h2>Detalles del pedido</h2>
+                                    <p v-if="selectedOrder">
+                                        Factura {{ selectedOrder.invoice_number }}
+                                    </p>
+                                </div>
+
+                                <button
+                                    class="close-button"
+                                    @click="closeOrderDetails"
+                                >
+                                    ×
+                                </button>
+                            </div>
+
+                            <div v-if="loadingOrderDetails" class="loading-state">
+                                Cargando información del pedido...
+                            </div>
+
+                            <div v-else-if="selectedOrder" class="details-content">
+
+                                <div class="details-status">
+                                    <span>Estado actual</span>
+                                    <strong>
+                                        {{ statusName(selectedOrder.status) }}
+                                    </strong>
+                                </div>
+
+                                <div class="details-grid">
+                                    <div class="detail-item">
+                                        <span>Producto</span>
+                                        <strong>{{ selectedOrder.product_name || 'No especificado' }}</strong>
+                                    </div>
+
+                                    <div class="detail-item">
+                                        <span>Número de factura</span>
+                                        <strong>{{ selectedOrder.invoice_number || 'No especificado' }}</strong>
+                                    </div>
+
+                                    <div class="detail-item">
+                                        <span>Cliente</span>
+                                        <strong>{{ selectedOrder.customer_name || 'No especificado' }}</strong>
+                                    </div>
+
+                                    <div class="detail-item">
+                                        <span>Número de cliente</span>
+                                        <strong>{{ selectedOrder.customer_number || 'No especificado' }}</strong>
+                                    </div>
+
+                                    <div class="detail-item">
+                                        <span>Fecha del pedido</span>
+                                        <strong>{{ formatDate(selectedOrder.order_date) }}</strong>
+                                    </div>
+
+                                    <div class="detail-item">
+                                        <span>Fecha y hora de registro</span>
+                                        <strong>
+                                            {{ selectedOrder.order_datetime
+                                                ? new Date(selectedOrder.order_datetime).toLocaleString('es-MX')
+                                                : 'No especificada' }}
+                                        </strong>
+                                    </div>
+
+                                    <div class="detail-item full-width">
+                                        <span>Información fiscal</span>
+                                        <strong>{{ selectedOrder.customer_fiscal_information || 'No especificada' }}</strong>
+                                    </div>
+
+                                    <div class="detail-item full-width">
+                                        <span>Dirección de entrega</span>
+                                        <strong>{{ selectedOrder.delivery_address || 'No especificada' }}</strong>
+                                    </div>
+
+                                    <div class="detail-item full-width">
+                                        <span>Notas adicionales</span>
+                                        <strong>{{ selectedOrder.notes || 'Sin notas adicionales' }}</strong>
+                                    </div>
+
+                                    <div class="detail-item">
+                                        <span>Requiere compra de material</span>
+                                        <strong>{{ selectedOrder.purchase_required ? 'Sí' : 'No' }}</strong>
+                                    </div>
+
+                                    <div class="detail-item">
+                                        <span>Evidencia de entrega</span>
+                                        <strong>{{ selectedOrder.delivery_evidence || 'Sin evidencia registrada' }}</strong>
+                                    </div>
+                                </div>
+
+                                <div class="details-footer">
+                                    <button
+                                        class="secondary-action"
+                                        @click="closeOrderDetails"
+                                    >
+                                        Cerrar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                 </section>
             </template>
         </main>
@@ -158,11 +542,31 @@
 </template>
 
 <script setup>
+
 import { computed, onMounted, reactive, ref } from 'vue';
+
+function toDateTimeLocal(value) {
+    if (!value) return '';
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+        return value.slice(0, 16);
+    }
+
+    const localDate = new Date(
+        date.getTime() - date.getTimezoneOffset() * 60000
+    );
+
+    return localDate.toISOString().slice(0, 16);
+}
 
 const user = ref(null);
 const employees = ref([]);
 const orders = ref([]);
+const deletedOrders = ref([]);
+const showDeletedOrders = ref(false);
+const loadingDeletedOrders = ref(false);
 const loading = ref(true);
 const saving = ref(false);
 const savingOrder = ref(false);
@@ -178,6 +582,16 @@ const showOrderForm = ref(false);
 const editingOrder = ref(null);
 const editingEmployee = ref(null);
 const evidenceDrafts = reactive({});
+const selectedOrder = ref(null);
+const showOrderDetails = ref(false);
+const loadingOrderDetails = ref(false);
+
+const orderFilters = reactive({
+    invoice_number: '',
+    customer_number: '',
+    date: '',
+    status: ''
+});
 
 const roles = [
     { value: 'Administrator', label: 'Administrador' },
@@ -188,7 +602,18 @@ const roles = [
 ];
 
 const employeeForm = reactive({ name: '', email: '', role: 'Sales', password: '', password_confirmation: '', is_active: true });
-const orderForm = reactive({ customer_number: '', invoice_number: '', product_name: '', order_date: new Date().toISOString().slice(0, 10), purchase_required: false });
+const orderForm = reactive({
+    customer_number: '',
+    customer_name: '',
+    customer_fiscal_information: '',
+    invoice_number: '',
+    product_name: '',
+    order_date: new Date().toISOString().slice(0, 10),
+    order_datetime: '',
+    delivery_address: '',
+    notes: '',
+    purchase_required: false
+});
 
 const firstName = computed(() => user.value?.name?.split(' ')[0] || 'equipo');
 const canCreateOrders = computed(() => ['Administrator', 'Sales'].includes(user.value?.role));
@@ -260,9 +685,116 @@ async function loadEmployees() {
     employees.value = await api('/api/employees');
 }
 
+
 async function loadOrders() {
-    orders.value = await api('/api/workspace/orders');
+    const params = new URLSearchParams();
+
+    Object.entries(orderFilters).forEach(([key, value]) => {
+        if (value) {
+            params.append(key, value);
+        }
+    });
+
+    const query = params.toString();
+
+    orders.value = await api(
+        `/api/workspace/orders${query ? `?${query}` : ''}`
+    );
 }
+
+
+async function loadDeletedOrders() {
+    loadingDeletedOrders.value = true;
+
+    try {
+        const params = new URLSearchParams();
+
+        Object.entries(orderFilters).forEach(([key, value]) => {
+            if (value) {
+                params.append(key, value);
+            }
+        });
+
+        const query = params.toString();
+
+        deletedOrders.value = await api(
+            `/api/workspace/deleted-orders${query ? `?${query}` : ''}`
+        );
+    } finally {
+        loadingDeletedOrders.value = false;
+    }
+}
+
+
+async function deleteOrder(order) {
+    const confirmed = window.confirm(
+        `¿Estás seguro de que deseas eliminar el pedido ${order.invoice_number}?`
+    );
+
+    if (!confirmed) return;
+
+    actionError.value = '';
+    notice.value = '';
+
+    try {
+        await api(`/api/workspace/orders/${order.id}`, {
+            method: 'DELETE'
+        });
+
+        await loadOrders();
+        await loadDeletedOrders();
+
+        notice.value = 'Pedido eliminado correctamente.';
+    } catch (error) {
+        actionError.value = error.message;
+    }
+}
+
+
+async function restoreOrder(order) {
+    const confirmed = window.confirm(
+        `¿Deseas restaurar el pedido ${order.invoice_number}?`
+    );
+
+    if (!confirmed) return;
+
+    actionError.value = '';
+    notice.value = '';
+
+    try {
+        await api(
+            `/api/workspace/deleted-orders/${order.id}/restore`,
+            { method: 'PATCH' }
+        );
+
+        await loadDeletedOrders();
+        await loadOrders();
+
+        notice.value = 'Pedido restaurado correctamente.';
+    } catch (error) {
+        actionError.value = error.message;
+    }
+}
+
+
+async function applyOrderFilters() {
+    actionError.value = '';
+
+    try {
+        await loadOrders();
+    } catch (error) {
+        actionError.value = error.message;
+    }
+}
+
+async function clearOrderFilters() {
+    Object.keys(orderFilters).forEach(key => {
+        orderFilters[key] = '';
+    });
+
+    await applyOrderFilters();
+}
+
 
 function roleName(role) {
     return roles.find(item => item.value === role)?.label || role;
@@ -276,10 +808,20 @@ function formatDate(value) {
     return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 function statusName(status) {
-    return ({ Pending: 'Pendiente', Processing: 'En proceso', 'Ready for Route': 'Listo para ruta', Shipped: 'Enviado', Delivered: 'Entregado' })[status] || status;
+    return ({
+        Ordered: 'Pedido registrado',
+        'In process': 'En proceso',
+        'In route': 'En ruta',
+        Delivered: 'Entregado'
+    })[status] || status;
 }
 function statusClass(status) {
-    return ({ Pending: 'pending', Processing: 'processing', 'Ready for Route': 'ready', Shipped: 'shipped', Delivered: 'delivered' })[status] || 'pending';
+    return ({
+        Ordered: 'pending',
+        'In process': 'processing',
+        'In route': 'ready',
+        Delivered: 'delivered'
+    })[status] || 'pending';
 }
 function resetEmployeeForm() {
     Object.assign(employeeForm, { name: '', email: '', role: 'Sales', password: '', password_confirmation: '', is_active: true });
@@ -337,21 +879,66 @@ async function toggleEmployee(employee) {
         actionError.value = error.message;
     }
 }
+
+async function openOrderDetails(order) {
+    actionError.value = '';
+    notice.value = '';
+    loadingOrderDetails.value = true;
+    showOrderDetails.value = true;
+    selectedOrder.value = null;
+
+    try {
+        selectedOrder.value = await api(
+            `/api/workspace/orders/${order.id}`
+        );
+    } catch (error) {
+        actionError.value = error.message;
+        showOrderDetails.value = false;
+    } finally {
+        loadingOrderDetails.value = false;
+    }
+}
+
+function closeOrderDetails() {
+    showOrderDetails.value = false;
+    selectedOrder.value = null;
+}
+
 function openEditOrder(order) {
     editingOrder.value = order;
+
     Object.assign(orderForm, {
-        customer_number: order.customer_number,
-        invoice_number: order.invoice_number,
-        product_name: order.product_name,
+        customer_number: order.customer_number || '',
+        customer_name: order.customer_name || '',
+        customer_fiscal_information: order.customer_fiscal_information || '',
+        invoice_number: order.invoice_number || '',
+        product_name: order.product_name || '',
         order_date: order.order_date || '',
-        purchase_required: order.purchase_required,
+        order_datetime: toDateTimeLocal(order.order_datetime),
+        delivery_address: order.delivery_address || '',
+        notes: order.notes || '',
+        purchase_required: !!order.purchase_required
     });
+
     orderFormError.value = '';
     showOrderForm.value = true;
 }
 function openCreateOrder() {
     editingOrder.value = null;
-    Object.assign(orderForm, { customer_number: '', invoice_number: '', product_name: '', order_date: new Date().toISOString().slice(0, 10), purchase_required: false });
+
+    Object.assign(orderForm, {
+        customer_number: '',
+        customer_name: '',
+        customer_fiscal_information: '',
+        invoice_number: '',
+        product_name: '',
+        order_date: new Date().toISOString().slice(0, 10),
+        order_datetime: toDateTimeLocal(new Date().toISOString()),
+        delivery_address: '',
+        notes: '',
+        purchase_required: false
+    });
+
     orderFormError.value = '';
     showOrderForm.value = true;
 }
@@ -374,7 +961,18 @@ async function createOrder() {
         }
         const wasEditing = !!editingOrder.value;
         editingOrder.value = null;
-        Object.assign(orderForm, { customer_number: '', invoice_number: '', product_name: '', order_date: new Date().toISOString().slice(0, 10), purchase_required: false });
+        Object.assign(orderForm, {
+            customer_number: '',
+            customer_name: '',
+            customer_fiscal_information: '',
+            invoice_number: '',
+            product_name: '',
+            order_date: new Date().toISOString().slice(0, 10),
+            order_datetime: '',
+            delivery_address: '',
+            notes: '',
+            purchase_required: false
+        });
         showOrderForm.value = false;
         await loadOrders();
         notice.value = wasEditing ? 'Pedido actualizado correctamente.' : 'Pedido registrado correctamente.';
@@ -384,19 +982,34 @@ async function createOrder() {
         savingOrder.value = false;
     }
 }
-async function updateOrder(order, action) {
+
+async function updateOrder(order, action, newStatus = null) {
     actionError.value = '';
     notice.value = '';
+
     const payload = { action };
-    if (action === 'deliver') payload.delivery_evidence = evidenceDrafts[order.id] || '';
+
+    if (action === 'deliver') {
+        payload.delivery_evidence = evidenceDrafts[order.id] || '';
+    }
+
+    if (action === 'admin_set_status') {
+        payload.status = newStatus;
+    }
+
     try {
-        await api(`/api/workspace/orders/${order.id}`, { method: 'PATCH', body: JSON.stringify(payload) });
+        await api(`/api/workspace/orders/${order.id}`, {
+            method: 'PATCH',
+            body: JSON.stringify(payload)
+        });
+
         await loadOrders();
         notice.value = 'Pedido actualizado correctamente.';
     } catch (error) {
         actionError.value = error.message;
     }
 }
+
 async function logout() {
     loggingOut.value = true;
     try {
@@ -458,7 +1071,24 @@ onMounted(loadWorkspace);
 .form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}
 .form-grid label{display:flex;flex-direction:column;gap:7px;color:#52677b;font-size:11px;font-weight:700}
 .form-grid input:not([type=checkbox]),.form-grid select,.evidence-input{width:100%;box-sizing:border-box;border:1px solid #dce4eb;border-radius:7px;padding:11px 12px;background:#fff;color:#263c51;font-size:12px;outline:none}
-.form-grid input:focus,.form-grid select:focus,.evidence-input:focus{border-color:#d69a42}
+.form-grid input:focus,
+.form-grid select:focus,
+.form-grid textarea:focus,
+.evidence-input:focus {
+    border-color: #d69a42;
+}
+.form-grid textarea {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid #dce4eb;
+    border-radius: 7px;
+    padding: 11px 12px;
+    background: #fff;
+    color: #263c51;
+    font-size: 12px;
+    font-family: Arial, sans-serif;
+    resize: vertical;
+}
 .check-field{flex-direction:row!important;align-items:center;gap:9px!important;padding-top:22px}
 .check-field input{accent-color:#d99a3c}
 .editor-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:18px}
@@ -475,6 +1105,95 @@ onMounted(loadWorkspace);
 .table-actions{display:flex;gap:13px}.text-action{border:0;background:transparent;color:#37668c;font-size:10px;font-weight:700;cursor:pointer}.text-action.danger{color:#b35c53}.text-action:disabled{opacity:.3;cursor:not-allowed}
 .empty-cell{text-align:center;color:#94a0ac;padding:30px!important}
 .order-list{display:flex;flex-direction:column;gap:10px}
+.order-view-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #e5ebf0;
+}
+
+.order-view-tabs button {
+    padding: 11px 15px;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    background: transparent;
+    color: #758597;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+.order-view-tabs button.active {
+    color: #183b5b;
+    border-bottom-color: #e9a13a;
+}
+
+.order-view-tabs button:hover {
+    color: #183b5b;
+}
+
+.deleted-order-card {
+    border-left: 3px solid #d69a42;
+}
+
+.order-filters {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(130px, 1fr));
+    gap: 13px;
+    align-items: end;
+    padding: 17px;
+    margin-bottom: 18px;
+    background: #f8fafc;
+    border: 1px solid #e5ebf0;
+    border-radius: 10px;
+}
+
+.order-filters label {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    color: #52677b;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.order-filters input,
+.order-filters select {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid #dce4eb;
+    border-radius: 7px;
+    padding: 10px;
+    background: #fff;
+    color: #263c51;
+    font-size: 11px;
+}
+
+.order-filters input:focus,
+.order-filters select:focus {
+    outline: none;
+    border-color: #d69a42;
+}
+
+.filter-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+@media(max-width: 850px) {
+    .order-filters {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media(max-width: 600px) {
+    .order-filters {
+        grid-template-columns: 1fr;
+    }
+}
+
 .order-card{display:grid;grid-template-columns:minmax(220px,1.5fr) minmax(125px,.6fr) minmax(190px,1fr);align-items:center;gap:16px;padding:16px;border:1px solid #e8edf1;border-radius:10px;background:#fff}
 .order-main{display:flex;align-items:center;gap:12px;min-width:0}
 .order-icon{display:grid;place-items:center;width:39px;height:39px;border-radius:10px;background:#edf3f8;color:#365c7c;font-size:19px;flex:none}
@@ -494,4 +1213,112 @@ onMounted(loadWorkspace);
 .dashboard-footer{display:flex;justify-content:space-between;padding:20px clamp(22px,6vw,90px);border-top:1px solid #e4eaf0;color:#a0abb5;font-size:9px;letter-spacing:1.2px}
 @media(max-width:850px){.overview-grid{grid-template-columns:repeat(2,1fr)}.order-card{grid-template-columns:1fr 1fr}.order-actions{grid-column:1/-1;justify-content:flex-start}}
 @media(max-width:600px){.topbar{height:auto;min-height:70px;padding:12px 18px}.topbar-right{gap:10px}.user-meta{display:none}.logout-button{padding:9px;font-size:10px}.dashboard-main{width:calc(100% - 28px);padding:32px 0 48px}.welcome-row{align-items:flex-start;flex-direction:column}.welcome-row h1{font-size:29px}.workspace-nav button{padding:12px 10px;font-size:10px}.overview-grid{grid-template-columns:1fr}.overview-note{grid-column:auto}.content-panel{padding:17px}.section-heading{align-items:flex-start;flex-direction:column}.form-grid{grid-template-columns:1fr}.check-field{padding-top:4px}.order-card{grid-template-columns:1fr}.order-actions{grid-column:auto;justify-content:flex-start}.order-status-block{padding-left:51px}.dashboard-footer{padding:18px;font-size:8px}}
+
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    background: rgba(16, 43, 70, 0.55);
+    backdrop-filter: blur(3px);
+}
+
+.details-modal {
+    width: min(700px, 100%);
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 27px;
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 20px 60px #102b4630;
+}
+
+.details-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 24px;
+}
+
+.details-header h2 {
+    margin: 0;
+    color: #163754;
+    font-size: 23px;
+}
+
+.details-header p:not(.eyebrow) {
+    color: #8190a0;
+    font-size: 11px;
+}
+
+.details-status {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    margin-bottom: 20px;
+    border-radius: 9px;
+    background: #f5f8fb;
+    color: #52677b;
+    font-size: 12px;
+}
+
+.details-status strong {
+    color: #37668c;
+}
+
+.details-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 17px;
+}
+
+.detail-item {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #edf1f4;
+    min-width: 0;
+}
+
+.detail-item span {
+    color: #8a98a6;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.detail-item strong {
+    color: #29435b;
+    font-size: 12px;
+    overflow-wrap: anywhere;
+}
+
+.detail-item.full-width {
+    grid-column: 1 / -1;
+}
+
+.details-footer {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 23px;
+}
+
+@media(max-width: 600px) {
+    .details-modal {
+        padding: 19px;
+    }
+
+    .details-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .detail-item.full-width {
+        grid-column: auto;
+    }
+}
+
 </style>
